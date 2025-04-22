@@ -1,10 +1,19 @@
+# 📁 File: main.py (Webhook version with Flask)
+
 import os
-from telegram.ext import Updater, CommandHandler
+from flask import Flask, request
+from telegram import Bot, Update
+from telegram.ext import Dispatcher, CommandHandler
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
+app = Flask(__name__)
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 KEY_PATH = os.getenv("KEY_PATH", "key.json")
+
+bot = Bot(token=TELEGRAM_TOKEN)
+dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
 
 def submit_url_to_indexing(url):
     SCOPES = ["https://www.googleapis.com/auth/indexing"]
@@ -25,12 +34,17 @@ def submit(update, context):
     except Exception as e:
         update.message.reply_text(f"❌ Lỗi: {str(e)}")
 
-def main():
-    updater = Updater(TELEGRAM_TOKEN, use_context=True)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler("submit", submit))
-    updater.start_polling()
-    updater.idle()
+dispatcher.add_handler(CommandHandler("submit", submit))
+
+@app.route(f"/webhook/{TELEGRAM_TOKEN}", methods=["POST"])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    dispatcher.process_update(update)
+    return "OK", 200
+
+@app.route("/")
+def home():
+    return "Bot is running (Webhook mode)", 200
 
 if __name__ == "__main__":
-    main()
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
