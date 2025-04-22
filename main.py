@@ -1,5 +1,3 @@
-# 📁 File: main.py (Webhook version with Flask)
-
 import os
 from flask import Flask, request
 from telegram import Bot, Update
