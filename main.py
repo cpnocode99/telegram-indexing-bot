@@ -32,7 +32,41 @@ def submit(update, context):
     except Exception as e:
         update.message.reply_text(f"❌ Lỗi: {str(e)}")
 
+def submitall(update, context):
+    message_lines = update.message.text.split("\n")
+    urls = message_lines[1:]  # Bỏ dòng đầu là /submitall
+
+    if not urls:
+        update.message.reply_text("❌ Bạn chưa nhập danh sách URL.")
+        return
+
+    errors = []
+    success_count = 0
+
+    for url in urls:
+        url = url.strip()
+        if not url:
+            continue
+        try:
+            submit_url_to_indexing(url)
+            success_count += 1
+        except Exception as e:
+            errors.append(f"❌ {url} – {str(e)}")
+
+    reply_lines = []
+
+    if success_count > 0:
+        reply_lines.append(f"✅ Đã gửi thành công {success_count} URL.")
+
+    if errors:
+        reply_lines.append("\n".join(errors))
+
+    reply = "\n".join(reply_lines)
+    update.message.reply_text(reply[:4096])  # Telegram giới hạn tin nhắn 4096 ký tự
+
+# Gắn các handler
 dispatcher.add_handler(CommandHandler("submit", submit))
+dispatcher.add_handler(CommandHandler("submitall", submitall))
 
 @app.route(f"/webhook/{TELEGRAM_TOKEN}", methods=["POST"])
 def webhook():
